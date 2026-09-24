@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unwritten History Publisher</title>
+<meta name="description" content="About the automation that publishes the Unwritten History video series to TikTok.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12141c; --surface: #191c27; --border: #2a2d3a;
+    --ink: #e8e4d9; --ink-dim: #8b90a0; --accent: #c9a54a; --accent-dim: #8a713a;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f6f3ea; --surface: #ffffff; --border: #e2dbc8;
+      --ink: #1c1a14; --ink-dim: #6b6455; --accent: #96742a; --accent-dim: #b8934a;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f3ea; --surface: #ffffff; --border: #e2dbc8;
+    --ink: #1c1a14; --ink-dim: #6b6455; --accent: #96742a; --accent-dim: #b8934a;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Source Sans 3", -apple-system, Segoe UI, Roboto, sans-serif; padding-inline: 20px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; padding-block: 28px; border-bottom: 1px solid var(--border); }
+  .mark { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mark svg { width: 18px; height: 18px; }
+  .mark circle, .mark line { stroke: var(--accent); }
+  header .name { font-family: "Spectral", Georgia, serif; font-size: 18px; letter-spacing: 0.02em; }
+  header .name .sub { display: block; font-family: "Source Sans 3", sans-serif; font-size: 12px; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+  nav.pages { display: flex; gap: 4px; padding-block: 16px; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
+  nav.pages a { color: var(--ink-dim); text-decoration: none; font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid transparent; }
+  nav.pages a.current { color: var(--accent); border-color: var(--accent-dim); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  nav.pages a:hover:not(.current) { color: var(--ink); }
+  main { padding-bottom: 64px; }
+  h1 { font-family: "Spectral", Georgia, serif; font-size: clamp(28px, 5vw, 38px); line-height: 1.15; margin: 0 0 6px; text-wrap: balance; }
+  .tagline { color: var(--accent); font-size: 15px; margin: 0 0 36px; font-style: italic; }
+  p { font-size: 16px; line-height: 1.7; color: var(--ink); margin: 0 0 20px; max-width: 60ch; }
+  a.inline { color: var(--accent); text-decoration-color: var(--accent-dim); }
+  .fact-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 36px 0; }
+  .fact { background: var(--surface); padding: 18px 20px; }
+  .fact .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); margin-bottom: 6px; }
+  .fact .value { font-size: 15px; color: var(--ink); }
+  .fact .value a { color: var(--accent); text-decoration: none; }
+  .fact .value a:hover { text-decoration: underline; }
+  footer { border-top: 1px solid var(--border); padding-block: 24px 40px; color: var(--ink-dim); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round">
+        <circle cx="12" cy="12" r="8.2"/>
+        <line x1="12" y1="12" x2="12" y2="7.2"/>
+        <line x1="12" y1="12" x2="15.3" y2="13.6"/>
+      </svg>
+    </div>
+    <div class="name">Unwritten History Publisher
+      <span class="sub">Publishing tool</span>
+    </div>
+  </header>
+
+  <nav class="pages">
+    <a href="index.html" class="current">About</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+  </nav>
+
+  <main>
+    <h1>What this tool does</h1>
+    <p class="tagline">One show, one account, published on schedule.</p>
+
+    <p>
+      Unwritten History Publisher generates narrated "what if" short-form video
+      content — history, science, space, and society reimagined — and publishes
+      it to the TikTok account
+      <a class="inline" href="https://www.tiktok.com/@unwrittenhistoryyt">@unwrittenhistoryyt</a>,
+      the official TikTok presence for the Unwritten History video series.
+    </p>
+    <p>
+      Every video is produced and reviewed before it goes out: a script, a
+      narration track, and a set of visuals, assembled into a short episode
+      and posted to the one account this tool is authorized for.
+    </p>
+
+    <div class="fact-row">
+      <div class="fact">
+        <div class="label">Connected account</div>
+        <div class="value"><a href="https://www.tiktok.com/@unwrittenhistoryyt">@unwrittenhistoryyt</a></div>
+      </div>
+      <div class="fact">
+        <div class="label">Format</div>
+        <div class="value">Narrated short-form video</div>
+      </div>
+      <div class="fact">
+        <div class="label">Category</div>
+        <div class="value">Entertainment</div>
+      </div>
+    </div>
+
+    <p>
+      See the <a class="inline" href="privacy.html">Privacy Policy</a> for what
+      data this tool accesses, and the <a class="inline" href="terms.html">Terms
+      of Service</a> for how it may be used.
+    </p>
+  </main>
+
+  <footer>
+    Unwritten History Publisher — last updated September 18, 2026
+  </footer>
+</div>
+</body>
+</html>
