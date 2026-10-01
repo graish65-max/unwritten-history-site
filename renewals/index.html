@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Renewal Tracker</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1c2330;--card:#fff;--mut:#6b7686;--line:#e3e6eb;--ok:#1a7f4b;--warn:#b7791f;--bad:#c53030;--acc:#2b5fd9}
+@media(prefers-color-scheme:dark){:root{--bg:#12151b;--fg:#e6e9ef;--card:#1b1f27;--mut:#8f9aab;--line:#2a303b;--ok:#4cc38a;--warn:#e0a84b;--bad:#f06a6a;--acc:#6b93f5}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+h1{font-size:22px;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+input,select,button{font:inherit;padding:8px 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button{cursor:pointer;background:var(--acc);color:#fff;border:0}
+button.s{background:transparent;color:var(--acc);border:1px solid var(--line);padding:4px 8px;font-size:13px}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:500;font-size:13px}
+.d{font-weight:600;white-space:nowrap}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.n{color:var(--mut);font-size:13px}
+#login{max-width:340px;margin:60px auto}#login form{grid-template-columns:1fr}
+#msg{color:var(--bad);font-size:13px;min-height:1em}
+[hidden]{display:none!important}
+@media(max-width:600px){.hide{display:none}}
+</style></head>
+<body><main>
+<div id="login" class="card" hidden>
+<h1>Renewal Tracker</h1><p class="n">Sign in, or create an account with the email you were invited with.</p>
+<form id="lf"><input name="email" type="email" placeholder="Email" required autocomplete="email">
+<input name="password" type="password" placeholder="Password (min 8 chars)" minlength="8" required autocomplete="current-password">
+<button>Sign in</button><button type="button" class="s" id="signup" style="padding:8px">Create account</button></form>
+<p id="msg"></p>
+</div>
+<div id="app" hidden>
+<header><h1>Renewal Tracker</h1><span class="n"><span id="who"></span> <button class="s" id="out">Sign out</button></span></header>
+<div class="card" id="denied" hidden>This account isn't on the invite list. Ask the owner to add your email.</div>
+<div class="card"><form id="f">
+<input name="name" placeholder="Name (e.g. example.com)" required>
+<select name="type"><option>Domain<option>Document<option>License<option>Subscription<option>Other</select>
+<input name="due" type="date" required>
+<select name="repeat"></select>
+<span style="display:flex;gap:6px"><input name="cost" type="number" min="0" step="0.01" placeholder="Renewal cost" style="min-width:0;flex:1">
+<select name="currency"><option>EUR<option>USD<option>GBP</select></span>
+<input name="notes" placeholder="Notes (optional)">
+<button>Add</button></form></div>
+<div class="card"><table><thead><tr><th>Name<th class="hide">Type<th>Due<th>Cost<th>Left<th></tr></thead><tbody id="t"></tbody></table>
+<p class="n" id="e" hidden>Nothing tracked yet.</p></div>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb = supabase.createClient('https://tqkcjrtsarlmcervpiss.supabase.co', 'sb_publishable_hrJyg9nBv5N_R-8D6JqPUg_WpTO7Cbc');
+const $ = id => document.getElementById(id);
+const IV = {none:0, monthly:1, quarterly:3, yearly:12, '2 years':24, '5 years':60, '10 years':120};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+function addMonths(s, n){ const d = parse(s), day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+n);
+d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth()+1, 0).getDate())); return iso(d); }
+$('f').repeat.innerHTML = Object.keys(IV).map(k => `<option>${k}</option>`).join(''); $('f').repeat.value = 'yearly';
+let items = [];
+async function show(session){
+$('login').hidden = !!session; $('app').hidden = !session;
+if (!session) return;
+$('who').textContent = session.user.email;
+const { data: m } = await sb.from('renewal_members').select('email');
+$('denied').hidden = !!(m && m.length); $('f').parentElement.hidden = !(m && m.length);
+refresh();
+}
+async function refresh(){
+const { data } = await sb.from('renewal_items').select('*').order('due');
+items = data || []; $('e').hidden = items.length > 0;
+const today = parse(iso(new Date()));
+$('t').innerHTML = items.map(i => {
+const dl = Math.round((parse(i.due) - today)/864e5), c = dl<0?'bad':dl<=30?'warn':'ok';
+const l = dl<0?(-dl)+'d overdue':dl==0?'today':dl+'d';
+return `<tr><td>${esc(i.name)}<div class="n">${esc(i.notes)}</div><td class="hide">${esc(i.type)}<td>${i.due}<td class="n">${i.cost == null ? '' : new Intl.NumberFormat(undefined,{style:'currency',currency:i.currency}).format(i.cost)}<td class="d ${c}">${l}
+<td><button class="s" data-a="renew" data-id="${i.id}">Renewed</button> <button class="s" data-a="del" data-id="${i.id}">✕</button></tr>`;
+}).join('');
+}
+$('t').onclick = async e => {
+const b = e.target.closest('button'); if (!b) return;
+const it = items.find(i => i.id === b.dataset.id);
+if (b.dataset.a === 'del') { if (confirm('Delete "'+it.name+'"?')) await sb.from('renewal_items').delete().eq('id', it.id); }
+else { const m = it.repeat_months; await sb.from('renewal_items').update({ due: m ? addMonths(it.due, m) : it.due, sent: [], last_overdue: null }).eq('id', it.id); }
+refresh();
+};
+$('f').onsubmit = async e => {
+e.preventDefault(); const f = e.target;
+const { error } = await sb.from('renewal_items').insert({ name: f.name.value.trim(), type: f.type.value, due: f.due.value, repeat_months: IV[f.repeat.value], cost: f.cost.value === '' ? null : +f.cost.value, currency: f.currency.value, notes: f.notes.value });
+if (error) return alert(error.message);
+f.name.value = ''; f.notes.value = ''; f.cost.value = ''; refresh();
+};
+async function auth(kind){
+const f = $('lf'); $('msg').textContent = '';
+const fn = kind === 'up' ? sb.auth.signUp : sb.auth.signInWithPassword;
+const { data, error } = await fn.call(sb.auth, { email: f.email.value.trim(), password: f.password.value });
+if (error) return $('msg').textContent = error.message;
+if (!data.session) $('msg').textContent = 'Account created but not confirmed: this email is not on the invite list.';
+}
+$('lf').onsubmit = e => { e.preventDefault(); auth('in'); };
+$('signup').onclick = () => auth('up');
+$('out').onclick = () => sb.auth.signOut();
+sb.auth.onAuthStateChange((_e, s) => show(s));
+sb.auth.getSession().then(({ data }) => show(data.session));
+</script></body></html>
