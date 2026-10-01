@@ -24,6 +24,7 @@ th{color:var(--mut);font-weight:500;font-size:13px}
 <body><main>
 <div id="login" class="card" hidden>
 <h1>Renewal Tracker</h1><p class="n">Sign in, or create an account with the email you were invited with.</p>
+<button type="button" id="g" style="width:100%;margin-bottom:12px">Continue with Google</button>
 <form id="lf"><input name="email" type="email" placeholder="Email" required autocomplete="email">
 <input name="password" type="password" placeholder="Password (min 8 chars)" minlength="8" required autocomplete="current-password">
 <button>Sign in</button><button type="button" class="s" id="signup" style="padding:8px">Create account</button></form>
@@ -94,8 +95,9 @@ const f = $('lf'); $('msg').textContent = '';
 const fn = kind === 'up' ? sb.auth.signUp : sb.auth.signInWithPassword;
 const { data, error } = await fn.call(sb.auth, { email: f.email.value.trim(), password: f.password.value });
 if (error) return $('msg').textContent = error.message;
-if (!data.session) $('msg').textContent = 'Account created but not confirmed: this email is not on the invite list.';
+if (!data.session) $('msg').textContent = 'No session. If this email signs in with Google, use "Continue with Google"; otherwise it is not on the invite list.';
 }
+$('g').onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
 $('lf').onsubmit = e => { e.preventDefault(); auth('in'); };
 $('signup').onclick = () => auth('up');
 $('out').onclick = () => sb.auth.signOut();
