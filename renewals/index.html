@@ -41,7 +41,7 @@ th{color:var(--mut);font-weight:500;font-size:13px}
 <span style="display:flex;gap:6px"><input name="cost" type="number" min="0" step="0.01" placeholder="Renewal cost" style="min-width:0;flex:1">
 <select name="currency"><option>EUR<option>USD<option>GBP</select></span>
 <input name="notes" placeholder="Notes (optional)">
-<button>Add</button></form></div>
+<button id="sub">Add</button><button type="button" class="s" id="cancel" hidden style="padding:8px">Cancel edit</button></form></div>
 <div class="card"><table><thead><tr><th>Name<th class="hide">Type<th>Due<th>Cost<th>Left<th></tr></thead><tbody id="t"></tbody></table>
 <p class="n" id="e" hidden>Nothing tracked yet.</p></div>
 </div>
@@ -50,14 +50,23 @@ th{color:var(--mut);font-weight:500;font-size:13px}
 <script>
 const sb = supabase.createClient('https://tqkcjrtsarlmcervpiss.supabase.co', 'sb_publishable_hrJyg9nBv5N_R-8D6JqPUg_WpTO7Cbc');
 const $ = id => document.getElementById(id);
-const IV = {none:0, monthly:1, quarterly:3, yearly:12, '2 years':24, '5 years':60, '10 years':120};
+const IV = {none:0, monthly:1, quarterly:3, yearly:12, '2 years':24, '3 years':36, '5 years':60, '10 years':120};
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
 function addMonths(s, n){ const d = parse(s), day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+n);
 d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth()+1, 0).getDate())); return iso(d); }
 $('f').repeat.innerHTML = Object.keys(IV).map(k => `<option>${k}</option>`).join(''); $('f').repeat.value = 'yearly';
-let items = [];
+let items = [], editing = null;
+const REV = Object.fromEntries(Object.entries(IV).map(([k, v]) => [v, k]));
+function setEdit(it){
+editing = it ? it.id : null; const f = $('f');
+f.name.value = it ? it.name : ''; f.type.value = it ? it.type : 'Domain'; f.due.value = it ? it.due : '';
+f.repeat.value = it ? (REV[it.repeat_months] || 'yearly') : 'yearly'; f.cost.value = it && it.cost != null ? it.cost : '';
+f.currency.value = it ? it.currency : 'EUR'; f.notes.value = it ? it.notes : '';
+$('sub').textContent = it ? 'Save' : 'Add'; $('cancel').hidden = !it;
+if (it) f.scrollIntoView({ behavior: 'smooth' });
+}
 async function show(session){
 $('login').hidden = !!session; $('app').hidden = !session;
 if (!session) return;
@@ -74,22 +83,30 @@ $('t').innerHTML = items.map(i => {
 const dl = Math.round((parse(i.due) - today)/864e5), c = dl<0?'bad':dl<=30?'warn':'ok';
 const l = dl<0?(-dl)+'d overdue':dl==0?'today':dl+'d';
 return `<tr><td>${esc(i.name)}<div class="n">${esc(i.notes)}</div><td class="hide">${esc(i.type)}<td>${i.due}<td class="n">${i.cost == null ? '' : new Intl.NumberFormat(undefined,{style:'currency',currency:i.currency}).format(i.cost)}<td class="d ${c}">${l}
-<td><button class="s" data-a="renew" data-id="${i.id}">Renewed</button> <button class="s" data-a="del" data-id="${i.id}">✕</button></tr>`;
+<td><button class="s" data-a="edit" data-id="${i.id}">Edit</button> <button class="s" data-a="renew" data-id="${i.id}">Renewed</button> <button class="s" data-a="del" data-id="${i.id}">✕</button></tr>`;
 }).join('');
 }
 $('t').onclick = async e => {
 const b = e.target.closest('button'); if (!b) return;
 const it = items.find(i => i.id === b.dataset.id);
+if (b.dataset.a === 'edit') return setEdit(it);
 if (b.dataset.a === 'del') { if (confirm('Delete "'+it.name+'"?')) await sb.from('renewal_items').delete().eq('id', it.id); }
 else { const m = it.repeat_months; await sb.from('renewal_items').update({ due: m ? addMonths(it.due, m) : it.due, sent: [], last_overdue: null }).eq('id', it.id); }
 refresh();
 };
 $('f').onsubmit = async e => {
 e.preventDefault(); const f = e.target;
-const { error } = await sb.from('renewal_items').insert({ name: f.name.value.trim(), type: f.type.value, due: f.due.value, repeat_months: IV[f.repeat.value], cost: f.cost.value === '' ? null : +f.cost.value, currency: f.currency.value, notes: f.notes.value });
-if (error) return alert(error.message);
-f.name.value = ''; f.notes.value = ''; f.cost.value = ''; refresh();
+const row = { name: f.name.value.trim(), type: f.type.value, due: f.due.value, repeat_months: IV[f.repeat.value], cost: f.cost.value === '' ? null : +f.cost.value, currency: f.currency.value, notes: f.notes.value };
+let r;
+if (editing) {
+const old = items.find(i => i.id === editing);
+if (old && old.due !== row.due) Object.assign(row, { sent: [], last_overdue: null });
+r = await sb.from('renewal_items').update(row).eq('id', editing);
+} else r = await sb.from('renewal_items').insert(row);
+if (r.error) return alert(r.error.message);
+setEdit(null); refresh();
 };
+$('cancel').onclick = () => setEdit(null);
 async function auth(kind){
 const f = $('lf'); $('msg').textContent = '';
 const fn = kind === 'up' ? sb.auth.signUp : sb.auth.signInWithPassword;
